@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MongoDB データ一覧</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 2.5em;
+        font-weight: 300;
+      }
+      .content {
+        padding: 30px;
+      }
+      .loading {
+        text-align: center;
+        padding: 50px;
+        color: #666;
+      }
+      .error {
+        background: #ffebee;
+        color: #c62828;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .stats {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      .stat-item {
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #667eea;
+      }
+      .stat-label {
+        color: #666;
+        font-size: 0.9em;
+      }
+      .table-container {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      th {
+        background: #667eea;
+        color: white;
+        padding: 15px;
+        text-align: left;
+        font-weight: 500;
+      }
+      td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+      }
+      tr:hover {
+        background-color: #f8f9fa;
+      }
+      .search-box {
+        margin-bottom: 20px;
+      }
+      .search-box input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+      .search-box input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      .no-data {
+        text-align: center;
+        padding: 50px;
+        color: #666;
+        font-style: italic;
+      }
+      .refresh-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+      .refresh-btn:hover {
+        background: #5a6fd8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="container">
+        <div class="header">
+          <h1>📊 MongoDB データ一覧</h1>
+          <p>MongoDB Atlasから取得したデータを表示しています</p>
+        </div>
+
+        <div class="content">
+          <!-- データ表示 -->
+          <div v-if="!loading && !error">
+            <!-- テーブル -->
+            <div class="table-container">
+              <table v-if="filteredNotes.length > 0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>名前</th>
+                    <th>メールアドレス</th>
+                    <th>電話番号</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(note, index) in filteredNotes" :key="note._id || index">
+                    <td>{{ index + 1 }}</td>
+                    <td>{{ note.name }}</td>
+                    <td>{{ note.mail }}</td>
+                    <td>{{ note.tel }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="no-data" v-else>
+                <h3>データが見つかりません</h3>
+                <p>検索条件を変更してください</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp } = Vue;
+
+      createApp({
+        data() {
+          return {
+            notes: [],
+            loading: true,
+            error: null,
+            searchQuery: "",
+          };
+        },
+        computed: {
+          filteredNotes() {
+            if (!this.searchQuery) {
+              return this.notes;
+            }
+            const query = this.searchQuery.toLowerCase();
+            return this.notes.filter((note) => note.name.toLowerCase().includes(query) || note.mail.toLowerCase().includes(query) || note.tel.toLowerCase().includes(query));
+          },
+        },
+        methods: {
+          async loadData() {
+            this.loading = true;
+            this.error = null;
+
+            try {
+              const response = await fetch("/api/notes");
+              if (!response.ok) {
+                throw new Error("データの取得に失敗しました");
+              }
+              this.notes = await response.json();
+            } catch (error) {
+              console.error("Error:", error);
+              this.error = error.message;
+            } finally {
+              this.loading = false;
+            }
+          },
+        },
+        mounted() {
+          this.loadData();
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>
